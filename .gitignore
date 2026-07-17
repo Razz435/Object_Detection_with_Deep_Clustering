@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+myenv/
+.env
+venv/
+ENV/
+
+# Project local files
+uploads/
+detected_objects/
+*.pkl
+*.pt
+
+# IDEs
+.vscode/
+.idea/

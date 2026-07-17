@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Object Detection System</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --danger: #f85149;
+      --warning: #e3b341;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(90deg, #0d1117 0%, #1a2236 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    #modelBadge {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    #modelLoadingBadge {
+      background: var(--warning);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 2px 10px;
+      display: none;
+      animation: pulse 1s infinite;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      min-height: calc(100vh - 57px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px 14px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn:active {
+      transform: scale(.97);
+    }
+
+    .btn:hover {
+      opacity: .85;
+    }
+
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-success {
+      background: var(--accent2);
+      color: #000;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      color: #000;
+    }
+
+    .btn-surface {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* File upload */
+    #videoFile {
+      display: none;
+    }
+
+    label[for="videoFile"] {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      background: var(--accent);
+      color: #000;
+      transition: opacity .15s;
+      user-select: none;
+    }
+
+    label[for="videoFile"]:hover {
+      opacity: .85;
+    }
+
+    #selectedFileName {
+      font-size: .75rem;
+      color: var(--muted);
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-height: 16px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+
+    /* Model selector */
+    .model-selector select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.8rem;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .model-selector select:focus {
+      border-color: var(--accent);
+    }
+
+    .model-note {
+      font-size: .68rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Auto cluster toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+    }
+
+    .toggle-row label {
+      font-size: .8rem;
+      color: var(--text);
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: transform .2s, background .2s;
+    }
+
+    .toggle input:checked+.slider {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle input:checked+.slider::before {
+      transform: translateX(16px);
+      background: #000;
+    }
+
+    .cluster-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .cluster-row input[type=number] {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: .875rem;
+    }
+
+    .cluster-row input:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    /* Stats */
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+
+    .stat-card .label {
+      font-size: .72rem;
+      color: var(--muted);
+    }
+
+    .stat-card .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .dot-on {
+      background: var(--accent2);
+      animation: pulse 1.4s infinite;
+    }
+
+    .dot-off {
+      background: var(--muted);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .35
+      }
+    }
+
+    /* Main */
+    .main {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: .85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #videoFeed {
+      display: block;
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      padding: 8px 18px;
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .2s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .object-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .obj-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform .18s, border-color .18s;
+    }
+
+    .obj-card:hover {
+      transform: scale(1.05);
+      border-color: var(--accent);
+    }
+
+    .obj-card img {
+      width: 100%;
+      height: 80px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .obj-card .obj-label {
+      font-size: .7rem;
+      padding: 4px 6px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .obj-card .obj-conf {
+      font-size: .65rem;
+      padding: 0 6px 4px;
+      color: var(--accent2);
+    }
+
+    .cluster-badge {
+      display: inline-block;
+      font-size: .6rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #000;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+    }
+
+    .empty-state {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    /* Custom confirm modal */
+    #confirmModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #confirmModal.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px 22px;
+      max-width: 380px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+      animation: slideUp .18s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .modal-box h3 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+    }
+
+    .modal-box p {
+      font-size: .875rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 22px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-actions .btn {
+      width: auto;
+      padding: 8px 20px;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: .875rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      z-index: 9999;
+      max-width: 360px;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #toast.success {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    #toast.error {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    #toast.info {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #toast.warning {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🎯 Object Detection System</h1>
+    <span class="badge">YOLOv8</span>
+    <span id="modelBadge">yolov8n</span>
+    <span id="modelLoadingBadge">⏳ Loading model…</span>
+  </header>
+
+  <div class="layout">
+    <!-- ========= SIDEBAR ========= -->
+    <aside class="sidebar">
+
+      <h2>🤖 Detection Model</h2>
+      <div class="model-selector">
+        <select id="modelSelect" onchange="changeModel(this.value)">
+          <option value="yolov8n.pt">Nano — fastest, basic accuracy</option>
+          <option value="yolov8s.pt">Small — good balance ✅ recommended</option>
+          <option value="yolov8m.pt">Medium — higher accuracy</option>
+          <option value="yolov8l.pt">Large — best for misclassification</option>
+          <option value="yolov8x.pt">XLarge — most accurate, slow</option>
+        </select>
+      </div>
+      <p class="model-note">⚠️ Larger models download on first use (~50–200 MB). Use Medium or Large for best result.
+      </p>
+
+      <div class="divider"></div>
+      <h2>📹 Video Source</h2>
+
+      <input type="file" id="videoFile" accept="video/*" />
+      <label for="videoFile">📂 Choose Video File</label>
+      <div id="selectedFileName">No file selected</div>
+      <button class="btn btn-primary" id="uploadBtn" onclick="uploadVideo()" disabled>⬆ Upload &amp; Start
+        Detection</button>
+      <button class="btn btn-success" id="webcamBtn" onclick="startWebcam()">📷 Start Webcam</button>
+      <button class="btn btn-surface" onclick="stopProcessing()">⏹ Stop Processing</button>
+
+      <div class="divider"></div>
+      <h2>🔬 Analysis</h2>
+
+      <button class="btn btn-warning" onclick="discardDuplicates()">🔍 Find Unique Objects</button>
+
+      <!-- Auto-cluster toggle -->
+      <div class="toggle-row">
+        <label for="autoCluster">🤖 Auto cluster count</label>
+        <label class="toggle">
+          <input type="checkbox" id="autoCluster" onchange="onAutoToggle(this)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <p class="model-note" id="autoClusterNote" style="display:none">Analyzes your unique objects using silhouette +
+        Calinski-Harabász scoring to pick the optimal number of clusters automatically.</p>
+
+      <div class="cluster-row" id="clusterCountRow">
+        <label style="font-size:.8rem;color:var(--muted);white-space:nowrap;">Clusters:</label>
+        <input type="number" id="nClusters" value="5" min="2" max="50" />
+      </div>
+      <button class="btn btn-surface" onclick="clusterObjects()">🗂 Cluster Objects</button>
+
+      <div class="divider"></div>
+      <h2>🗑 Database</h2>
+      <button class="btn btn-danger" onclick="clearDatabase('all')" style="font-size:.8rem;">🗑 Clear All
+        Objects</button>
+      <button class="btn btn-warning" onclick="clearDatabase('unique')" style="font-size:.8rem;">🗑 Clear Unique
+        Objects</button>
+      <button class="btn btn-surface" onclick="clearDatabase('clustered')" style="font-size:.8rem;">🗑 Clear
+        Clusters</button>
+      <button class="btn btn-surface" onclick="clearDatabase('everything')"
+        style="font-size:.75rem;border:1px solid var(--danger);color:var(--danger);">⚠️ Clear Everything</button>
+
+      <div class="divider"></div>
+      <h2>📊 Status</h2>
+      <div style="font-size:.85rem;display:flex;align-items:center;gap:4px;">
+        <span class="status-dot dot-off" id="dotEl"></span>
+        <span id="statusText">Idle</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><span class="label">All</span><span class="value" id="statAll">0</span></div>
+        <div class="stat-card"><span class="label">Unique</span><span class="value" id="statUnique">0</span></div>
+        <div class="stat-card"><span class="label">Clusters</span><span class="value" id="statClusters">0</span></div>
+      </div>
+
+    </aside>
+
+    <!-- ========= MAIN ========= -->
+    <main class="main">
+      <div class="video-card">
+        <div class="card-header">
+          <span class="status-dot dot-off" id="dotFeed"></span>
+          Live Detection Feed
+          <span id="feedSourceLabel" style="margin-left:auto;font-size:.75rem;color:var(--muted);"></span>
+        </div>
+        <img id="videoFeed" src="/video_feed" alt="Waiting for video source…" />
+      </div>
+
+      <div>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('all',this)">All Objects</button>
+          <button class="tab" onclick="switchTab('unique',this)">Unique</button>
+          <button class="tab" onclick="switchTab('clustered',this)">Clustered</button>
+        </div>
+        <div id="panel-all" class="tab-panel active">
+          <div class="object-grid" id="allGrid">
+            <div class="empty-state">Upload a video or start the webcam to detect objects.</div>
+          </div>
+        </div>
+        <div id="panel-unique" class="tab-panel">
+          <div class="object-grid" id="uniqueGrid">
+            <div class="empty-state">Run "Find Unique Objects" to populate this view.</div>
+          </div>
+        </div>
+        <div id="panel-clustered" class="tab-panel">
+          <div class="object-grid" id="clusteredGrid">
+            <div class="empty-state">Run "Cluster Objects" to populate this view.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Custom confirm modal -->
+  <div id="confirmModal">
+    <div class="modal-box">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalMsg">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-surface" onclick="closeModal(false)">Cancel</button>
+        <button class="btn btn-danger" id="modalConfirmBtn" onclick="closeModal(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // ── File picker ─────────────────────────────────────────────────────
+    const videoFileInput = document.getElementById('videoFile');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileLabel = document.getElementById('selectedFileName');
+
+    videoFileInput.addEventListener('change', function () {
+      if (this.files && this.files.length > 0) {
+        fileLabel.textContent = this.files[0].name;
+        fileLabel.style.color = 'var(--text)';
+        uploadBtn.disabled = false;
+      } else {
+        fileLabel.textContent = 'No file selected';
+        fileLabel.style.color = 'var(--muted)';
+        uploadBtn.disabled = true;
+      }
+    });
+
+    // ── Toast ───────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { t.className = ''; }, 5000);
+    }
+
+    // ── Tabs ────────────────────────────────────────────────────────────
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+      if (name === 'all') loadAllObjects();
+      if (name === 'unique') loadUniqueObjects();
+      if (name === 'clustered') loadClusteredObjects();
+    }
+
+    // ── Object grid ─────────────────────────────────────────────────────
+    function renderGrid(id, objects) {
+      const el = document.getElementById(id);
+      if (!objects || objects.length === 0) {
+        el.innerHTML = '<div class="empty-state">No objects found.</div>';
+        return;
+      }
+      el.innerHTML = objects.map(o => {
+        let conf = '';
+        if (o.cluster_id !== undefined) {
+          conf = `<span class="cluster-badge">Cluster ${o.cluster_id}</span>`;
+          if (o.cluster_size) conf += ` <span style="font-size:.6rem;color:var(--muted)">(${o.cluster_size})</span>`;
+        } else if (o.confidence) {
+          conf = (o.confidence * 100).toFixed(0) + '%';
+        }
+        return `<div class="obj-card">
+        <img src="${o.web_path}" alt="${o.label}" loading="lazy" onerror="this.style.display='none'" />
+        <div class="obj-label">${o.label}</div>
+        <div class="obj-conf">${conf}</div>
+      </div>`;
+      }).join('');
+    }
+
+    async function loadAllObjects() { try { const r = await fetch('/get_all_objects'); const d = await r.json(); renderGrid('allGrid', d.objects); } catch (e) { } }
+    async function loadUniqueObjects() { try { const r = await fetch('/get_unique_objects'); const d = await r.json(); renderGrid('uniqueGrid', d.objects); } catch (e) { } }
+    async function loadClusteredObjects() { try { const r = await fetch('/get_clustered_objects'); const d = await r.json(); renderGrid('clusteredGrid', d.objects); } catch (e) { } }
+
+    // ── Status polling ──────────────────────────────────────────────────
+    async function updateStatus() {
+      try {
+        const r = await fetch('/current_status');
+        const d = await r.json();
+        document.getElementById('statAll').textContent = d.all_objects ?? 0;
+        document.getElementById('statUnique').textContent = d.unique_objects ?? 0;
+        document.getElementById('statClusters').textContent = d.clusters ?? 0;
+
+        const on = d.is_processing;
+        const dot = document.getElementById('dotEl');
+        const dotFeed = document.getElementById('dotFeed');
+        document.getElementById('statusText').textContent = on ? ('Processing: ' + (d.video_file || '…')) : 'Idle';
+        dot.className = 'status-dot ' + (on ? 'dot-on' : 'dot-off');
+        dotFeed.className = 'status-dot ' + (on ? 'dot-on' : 'dot-off');
+
+        // Update model badge
+        if (d.current_model) {
+          document.getElementById('modelBadge').textContent = d.current_model.replace('.pt', '');
+          const loadingBadge = document.getElementById('modelLoadingBadge');
+          loadingBadge.style.display = d.model_loading ? 'inline-block' : 'none';
+          // Sync dropdown
+          const sel = document.getElementById('modelSelect');
+          if (sel.value !== d.current_model && !d.model_loading) {
+            sel.value = d.current_model;
+          }
+        }
+
+        if (on) {
+          const active = document.querySelector('.tab.active');
+          if (active && active.textContent.toLowerCase().includes('all')) loadAllObjects();
+        }
+      } catch (e) { }
+    }
+    setInterval(updateStatus, 2000);
+    updateStatus();
+
+    // ── Feed reload ─────────────────────────────────────────────────────
+    function reloadFeed() {
+      const img = document.getElementById('videoFeed');
+      img.src = '/video_feed?' + Date.now();
+    }
+
+    // ── Model selector ──────────────────────────────────────────────────
+    async function changeModel(modelName) {
+      showToast(`⏳ Switching to ${modelName.replace('.pt', '')}… this may download the model`, 'warning');
+      document.getElementById('modelLoadingBadge').style.display = 'inline-block';
+      try {
+        const res = await fetch('/change_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: modelName })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ ${data.message}`, 'success');
+        } else {
+          showToast('❌ ' + (data.error || 'Failed to change model'), 'error');
+          document.getElementById('modelLoadingBadge').style.display = 'none';
+        }
+      } catch (e) {
+        showToast('❌ ' + e.message, 'error');
+        document.getElementById('modelLoadingBadge').style.display = 'none';
+      }
+    }
+
+    // ── Auto cluster toggle ─────────────────────────────────────────────
+    function onAutoToggle(cb) {
+      const numInput = document.getElementById('nClusters');
+      const countRow = document.getElementById('clusterCountRow');
+      const note = document.getElementById('autoClusterNote');
+      if (cb.checked) {
+        numInput.disabled = true;
+        countRow.style.opacity = '0.4';
+        note.style.display = 'block';
+      } else {
+        numInput.disabled = false;
+        countRow.style.opacity = '1';
+        note.style.display = 'none';
+      }
+    }
+
+    // ── Upload ──────────────────────────────────────────────────────────
+    async function uploadVideo() {
+      const file = videoFileInput.files[0];
+      if (!file) { showToast('Please choose a video file first.', 'error'); return; }
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = '⏳ Uploading…';
+      showToast('⏳ Uploading ' + file.name + '…', 'info');
+      const formData = new FormData();
+      formData.append('video', file);
+      try {
+        const res = await fetch('/upload_video', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ ' + (data.message || 'Detection started!'), 'success');
+          document.getElementById('feedSourceLabel').textContent = file.name;
+          setTimeout(reloadFeed, 800);
+        } else {
+          showToast('❌ ' + (data.error || 'Upload failed'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ Upload error: ' + err.message, 'error');
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = '⬆ Upload & Start Detection';
+      }
+    }
+
+    // ── Webcam ──────────────────────────────────────────────────────────
+    async function startWebcam() {
+      const btn = document.getElementById('webcamBtn');
+      btn.disabled = true; btn.textContent = '⏳ Starting…';
+      showToast('📷 Starting webcam…', 'info');
+      try {
+        const res = await fetch('/start_webcam');
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ ' + (data.message || 'Webcam started'), 'success');
+          document.getElementById('feedSourceLabel').textContent = 'Webcam';
+          setTimeout(reloadFeed, 800);
+        } else {
+          showToast('❌ ' + (data.error || 'Could not start webcam'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ Webcam error: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '📷 Start Webcam';
+      }
+    }
+
+    // ── Stop ────────────────────────────────────────────────────────────
+    async function stopProcessing() {
+      await fetch('/stop_processing');
+      showToast('⏹ Processing stopped', 'info');
+      document.getElementById('feedSourceLabel').textContent = '';
+    }
+
+    // ── Deduplication ───────────────────────────────────────────────────
+    async function discardDuplicates() {
+      showToast('🔍 Analysing for unique objects…', 'info');
+      try {
+        const res = await fetch('/discard_duplicates', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delete_original: false })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ ' + data.message, 'success'); loadUniqueObjects(); }
+        else showToast('❌ ' + (data.error || 'Failed'), 'error');
+      } catch (e) { showToast('❌ ' + e.message, 'error'); }
+    }
+
+    // ── Clustering ──────────────────────────────────────────────────────
+    async function clusterObjects() {
+      const isAuto = document.getElementById('autoCluster').checked;
+      const n = isAuto ? null : (parseInt(document.getElementById('nClusters').value) || null);
+
+      showToast(isAuto
+        ? '🤖 Auto-clustering: analysing unique objects to find optimal k…'
+        : `🗂 Clustering into ${n} groups…`, 'info');
+
+      try {
+        const res = await fetch('/cluster_objects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ n_clusters: n, use_optimal: isAuto })
+        });
+        const data = await res.json();
+        if (data.success) {
+          let msg = `✅ ${data.n_clusters} clusters from ${data.total_objects} objects`;
+          if (data.feature_type) msg += ` · ${data.feature_type}`;
+          if (data.per_class && data.per_class.length) {
+            const parts = data.per_class.map(c => `${c.label}: ${c.k}`).join(', ');
+            msg += ` (${parts})`;
+          }
+          showToast(msg, 'success');
+          loadClusteredObjects();
+          // Switch to clustered tab automatically
+          const btn = document.querySelector('.tab:nth-child(3)');
+          if (btn) switchTab('clustered', btn);
+        } else {
+          showToast('❌ ' + (data.error || 'Clustering failed'), 'error');
+        }
+      } catch (e) { showToast('❌ ' + e.message, 'error'); }
+    }
+
+    // ── Custom modal (replaces window.confirm) ──────────────────────────
+    let _modalResolve = null;
+    function showModal(title, msg, confirmLabel = 'Confirm', danger = true) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMsg').textContent = msg;
+      const btn = document.getElementById('modalConfirmBtn');
+      btn.textContent = confirmLabel;
+      btn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-warning');
+      document.getElementById('confirmModal').classList.add('open');
+      return new Promise(resolve => { _modalResolve = resolve; });
+    }
+    function closeModal(result) {
+      document.getElementById('confirmModal').classList.remove('open');
+      if (_modalResolve) { _modalResolve(result); _modalResolve = null; }
+    }
+    // Close on backdrop click
+    document.getElementById('confirmModal').addEventListener('click', function (e) {
+      if (e.target === this) closeModal(false);
+    });
+
+    // ── Clear ───────────────────────────────────────────────────────────
+    async function clearDatabase(type) {
+      const labels = {
+        all: 'all detected objects',
+        unique: 'unique objects',
+        clustered: 'clusters',
+        everything: 'EVERYTHING — all objects, unique & clusters',
+      };
+      const confirmed = await showModal(
+        `🗑 Clear ${labels[type] || type}?`,
+        `This will permanently delete ${labels[type] || type} from the database and disk. This cannot be undone.`,
+        'Yes, clear it',
+        true
+      );
+      if (!confirmed) return;
+      try {
+        const res = await fetch('/clear_database', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🗑 Cleared ${labels[type] || type}`, 'success');
+          if (type === 'all' || type === 'everything') loadAllObjects();
+          if (type === 'unique' || type === 'everything') loadUniqueObjects();
+          if (type === 'clustered' || type === 'everything') loadClusteredObjects();
+        } else {
+          showToast('❌ ' + (data.error || 'Clear failed'), 'error');
+        }
+      } catch (e) { showToast('❌ ' + e.message, 'error'); }
+    }
+
+    // Initial load
+    loadAllObjects();
+  </script>
+</body>
+
+</html>
