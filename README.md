@@ -1,3 +1,12 @@
+---
+title: Object Detection System
+emoji: 🎯
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+---
+
 # Object Detection with Deep Clustering
 
 A Flask-based real-time object detection and visual clustering system built with YOLOv8, OpenCV, and NumPy. The app can process webcam feeds or uploaded videos, detect objects frame by frame, save cropped detections, and organize them into all, unique, and clustered object groups.
