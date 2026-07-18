@@ -1,12 +1,6 @@
 Live link:https://object-detection-with-deep-clustering.onrender.com
----
-title: Object Detection System
-emoji: 🎯
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
----
+
+# Title: Object Detection System
 
 # Object Detection with Deep Clustering
 
