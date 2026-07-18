@@ -120,11 +120,11 @@ def process_video():
                 continue
             
             try:
-                # Resize frame for faster processing
-                frame_small = resize_frame(frame, 640)
+                # Resize frame to 320 for extremely lightweight processing
+                frame_small = resize_frame(frame, 320)
                 
-                # Run YOLO detection
-                results = model(frame_small, conf=Config.DETECTION_CONFIDENCE, verbose=False)
+                # Run YOLO detection with imgsz=320
+                results = model(frame_small, conf=Config.DETECTION_CONFIDENCE, imgsz=320, verbose=False)
                 
                 display_frame = frame_small.copy()
                 
@@ -158,6 +158,10 @@ def process_video():
                 
                 with frame_lock:
                     current_frame = display_frame.copy()
+                
+                # Garbage collect unused memory immediately
+                import gc
+                gc.collect()
                     
             except Exception as e:
                 print(f"Error processing frame: {e}")
