@@ -3,6 +3,11 @@ import cv2
 import numpy as np
 from flask import Flask, render_template, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
+import torch
+# Force PyTorch to use a single thread to save memory on CPU
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 from ultralytics import YOLO
 import threading
 import time
